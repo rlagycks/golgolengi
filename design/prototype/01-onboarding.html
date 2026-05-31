@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FHOS — 온보딩</title>
+<link rel="stylesheet" href="_tokens.css">
+<style>
+body { padding: 0; }
+.proto-nav { position: fixed; top: 0; z-index: 999; }
+.main { padding-top: 44px; }
+
+/* Onboarding layout */
+.ob-screen { display: none; flex-direction: column; min-height: 844px; background: var(--surface); }
+.ob-screen.active { display: flex; }
+
+.ob-progress-bar { height: 3px; background: var(--border); flex-shrink: 0; }
+.ob-progress-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width .4s ease; }
+
+.ob-header { padding: 16px 20px 0; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.ob-back { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-md); color: var(--on-surface); font-size: 22px; cursor: pointer; }
+.ob-step-label { font-size: 13px; color: var(--on-surface-muted); font-weight: 600; }
+
+.ob-body { flex: 1; padding: 24px 20px; overflow-y: auto; scrollbar-width: none; }
+.ob-body::-webkit-scrollbar { display: none; }
+
+.ob-footer { padding: 16px 20px 40px; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+
+.ob-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; line-height: 1.3; }
+.ob-sub { font-size: 15px; color: var(--on-surface-muted); margin-bottom: 28px; line-height: 1.6; }
+
+/* Option Cards */
+.option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.option-card {
+  background: var(--background); border-radius: var(--r-lg);
+  padding: 16px; cursor: pointer;
+  border: 2px solid transparent; transition: all .15s;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+}
+.option-card:hover { border-color: var(--border-strong); }
+.option-card.selected { background: var(--primary-container); border-color: var(--primary); }
+.option-icon { font-size: 28px; }
+.option-label { font-size: 14px; font-weight: 700; }
+.option-desc { font-size: 12px; color: var(--on-surface-muted); line-height: 1.4; }
+.option-card.selected .option-desc { color: var(--on-primary-container); }
+.option-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--primary); display: none;
+  align-items: center; justify-content: center; margin-left: auto; margin-top: -4px;
+}
+.option-card.selected .option-check { display: flex; }
+
+/* Slider */
+.slider-wrap { padding: 0 4px; }
+.slider-value { font-size: 36px; font-weight: 800; color: var(--primary); text-align: center; margin-bottom: 8px; }
+.slider-unit { font-size: 16px; font-weight: 600; color: var(--on-surface-muted); margin-left: 4px; }
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 8px;
+  border-radius: 99px; background: var(--border); outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 24px; height: 24px;
+  border-radius: 50%; background: var(--primary); cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30,140,110,.4);
+}
+.slider-range { display: flex; justify-content: space-between; font-size: 12px; color: var(--on-surface-muted); margin-top: 8px; }
+
+/* PIPA Consent */
+.consent-card {
+  background: var(--surface-elevated); border-radius: var(--r-lg);
+  border: 1px solid var(--border); padding: 16px; margin-bottom: 12px;
+}
+.consent-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.consent-row:last-child { border-bottom: none; }
+.checkbox {
+  width: 22px; height: 22px; border-radius: var(--r-sm); border: 2px solid var(--border);
+  flex-shrink: 0; margin-top: 1px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.checkbox.checked { background: var(--primary); border-color: var(--primary); }
+.consent-text { flex: 1; }
+.consent-label { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.consent-required { font-size: 11px; color: var(--risk-critical); font-weight: 700; }
+.consent-optional { font-size: 11px; color: var(--on-surface-muted); font-weight: 600; }
+.consent-detail { font-size: 12px; color: var(--on-surface-muted); line-height: 1.5; }
+
+/* Name Input */
+.name-input {
+  width: 100%; padding: 16px; background: var(--background); border: 2px solid transparent;
+  border-radius: var(--r-md); font-size: 17px; font-weight: 600; color: var(--on-surface);
+  outline: none; font-family: var(--font); transition: border-color .15s;
+}
+.name-input:focus { background: var(--surface); border-color: var(--primary); }
+
+/* Risk Reveal */
+.risk-reveal { display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
+.big-ring { position: relative; width: 160px; height: 160px; }
+.ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ring-score { font-size: 48px; font-weight: 800; letter-spacing: -.04em; }
+.ring-label { font-size: 13px; color: var(--on-surface-muted); font-weight: 600; }
+.reveal-title { font-size: 22px; font-weight: 800; margin: 20px 0 8px; text-align: center; }
+.reveal-sub { font-size: 14px; color: var(--on-surface-muted); text-align: center; line-height: 1.6; margin-bottom: 24px; }
+.mission-card {
+  width: 100%; background: var(--primary-container);
+  border-radius: var(--r-xl); padding: 20px;
+}
+.mission-label { font-size: 12px; font-weight: 700; color: var(--on-primary-container); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+.mission-title { font-size: 17px; font-weight: 700; color: var(--on-primary-container); margin-bottom: 4px; }
+.mission-desc { font-size: 13px; color: var(--on-primary-container); opacity: .8; }
+
+/* Tag rows */
+.tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.tag {
+  padding: 8px 16px; border-radius: var(--r-full);
+  background: var(--background); border: 2px solid transparent;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.tag:hover { border-color: var(--border-strong); }
+.tag.selected { background: var(--primary-container); border-color: var(--primary); color: var(--on-primary-container); }
+
+/* Progress dots */
+.ob-dots { display: flex; gap: 6px; justify-content: center; padding: 12px 0; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+.dot.active { background: var(--primary); width: 18px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:999;width:390px;">
+  <div class="proto-nav" style="width:100%;position:relative;border-radius:0;">
+    <div style="background:#1E293B;padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
+      <a href="index.html" class="pnav-link">← 목록</a>
+      <a href="01-onboarding.html" class="pnav-link on">온보딩</a>
+      <a href="02-home.html" class="pnav-link">홈</a>
+      <a href="03-challenge.html" class="pnav-link">챌린지</a>
+      <a href="04-family.html" class="pnav-link">가족</a>
+      <a href="05-risk-dashboard.html" class="pnav-link">리포트</a>
+      <a href="06-profile-badges.html" class="pnav-link">마이</a>
+    </div>
+  </div>
+</div>
+
+<div class="main" style="display:flex;justify-content:center;padding-top:56px;">
+<div class="phone" style="min-height:auto;">
+
+<!-- === STEP 0: Social Login === -->
+<div class="ob-screen active" id="step0" style="background: linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 60%);">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;">
+    <div style="width:80px;height:80px;background:var(--primary);border-radius:24px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 8px 24px rgba(30,140,110,.3);">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <div style="font-size:28px;font-weight:800;letter-spacing:-.03em;margin-bottom:8px;text-align:center;">Family Health OS</div>
+    <div style="font-size:15px;color:var(--on-surface-muted);text-align:center;line-height:1.6;margin-bottom:40px;">가족이 함께 만드는<br>건강한 미래</div>
+    <button class="btn btn-primary btn-w" style="margin-bottom:12px;gap:10px;" onclick="goStep(1)">
+      <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Google로 계속하기
+    </button>
+    <button class="btn btn-secondary btn-w" style="gap:10px;" onclick="goStep(1)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--on-surface)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      Apple로 계속하기
+    </button>
+    <div style="font-size:11px;color:var(--on-surface-muted);margin-top:20px;text-align:center;line-height:1.6;">계속하면 서비스 이용약관 및<br>개인정보처리방침에 동의하는 것입니다.</div>
+  </div>
+</div>
+
+<!-- === STEP 1: PIPA Consent === -->
+<div class="ob-screen" id="step1">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:10%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(0)">‹</button>
+    <span class="ob-step-label">STEP 1 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">개인정보 수집·이용에<br>동의해 주세요</div>
+    <div class="ob-sub">가족 건강 관리를 위해 아래 정보가 필요합니다.</div>
+
+    <div class="consent-card">
+      <div class="consent-row">
+        <div class="checkbox checked" onclick="toggleCheck(this)">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="consent-text">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="consent-label">전체 동의</span>
+          </div>
+          <div class="consent-detail">아래 모든 항목에 동의합니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="consent-card">
+      <div class="consent-row">
+        <div class="checkbox checked" onclick="toggleCheck(this)">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="consent-text">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="consent-label">건강 정보 수집·이용</span>
+            <span class="consent-required">(필수)</span>
+          </div>
+          <div class="consent-detail">건강 설문, 챌린지 기록, 리스크 점수 산출에 활용됩니다.</div>
+        </div>
+      </div>
+      <div class="consent-row">
+        <div class="checkbox checked" onclick="toggleCheck(this)">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="consent-text">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="consent-label">가족 내 데이터 공유</span>
+            <span class="consent-required">(필수)</span>
+          </div>
+          <div class="consent-detail">동의한 항목만 가족 그룹에 공개됩니다.</div>
+        </div>
+      </div>
+      <div class="consent-row">
+        <div class="checkbox" onclick="toggleCheck(this)">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="consent-text">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="consent-label">마케팅 정보 수신</span>
+            <span class="consent-optional">(선택)</span>
+          </div>
+          <div class="consent-detail">챌린지, 배지 등 건강 정보를 알림으로 받습니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--secondary-container);border-radius:var(--r-md);padding:14px;margin-top:8px;">
+      <div style="font-size:13px;font-weight:700;color:var(--on-secondary-container);margin-bottom:4px;">ℹ️ 미성년자 보호</div>
+      <div style="font-size:12px;color:var(--on-secondary-container);opacity:.8;line-height:1.5;">14세 미만 가족 구성원을 추가할 경우, 보호자 동의 절차가 별도로 진행됩니다.</div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(2)">동의하고 시작하기</button>
+  </div>
+</div>
+
+<!-- === STEP 2: 이름 입력 === -->
+<div class="ob-screen" id="step2">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:20%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(1)">‹</button>
+    <span class="ob-step-label">STEP 2 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">이름이 무엇인가요?</div>
+    <div class="ob-sub">가족 그룹에서 표시될 이름입니다.</div>
+    <input class="name-input" type="text" placeholder="홍길동" maxlength="10">
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(3)">다음</button>
+  </div>
+</div>
+
+<!-- === STEP 3: 역할 선택 === -->
+<div class="ob-screen" id="step3">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:30%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(2)">‹</button>
+    <span class="ob-step-label">STEP 3 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">가족 내 역할을<br>선택해 주세요</div>
+    <div class="ob-sub">리스크 점수 산출에 반영됩니다.</div>
+    <div class="option-grid">
+      <div class="option-card" onclick="selectOption(this)">
+        <div class="option-icon">👤</div>
+        <div class="option-label">본인</div>
+        <div class="option-desc">그룹을 만드는 주체</div>
+        <div class="option-check"><svg width="10" height="10" viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg></div>
+      </div>
+      <div class="option-card" onclick="selectOption(this)">
+        <div class="option-icon">💑</div>
+        <div class="option-label">배우자</div>
+        <div class="option-desc">파트너와 함께</div>
+        <div class="option-check"><svg width="10" height="10" viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg></div>
+      </div>
+      <div class="option-card" onclick="selectOption(this)">
+        <div class="option-icon">👶</div>
+        <div class="option-label">자녀</div>
+        <div class="option-desc">어린이·청소년</div>
+        <div class="option-check"><svg width="10" height="10" viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg></div>
+      </div>
+      <div class="option-card" onclick="selectOption(this)">
+        <div class="option-icon">👴</div>
+        <div class="option-label">부모</div>
+        <div class="option-desc">중장년·노년층</div>
+        <div class="option-check"><svg width="10" height="10" viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(4)">다음</button>
+  </div>
+</div>
+
+<!-- === STEP 4: 나이 === -->
+<div class="ob-screen" id="step4">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:40%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(3)">‹</button>
+    <span class="ob-step-label">STEP 4 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">나이를 알려주세요</div>
+    <div class="ob-sub">연령은 유전·임상 리스크 계산에 사용됩니다.</div>
+    <div class="slider-wrap" style="text-align:center;padding-top:20px;">
+      <div class="slider-value"><span id="ageVal">42</span><span class="slider-unit">세</span></div>
+      <input type="range" min="5" max="90" value="42" oninput="document.getElementById('ageVal').textContent=this.value">
+      <div class="slider-range"><span>5세</span><span>90세</span></div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(5)">다음</button>
+  </div>
+</div>
+
+<!-- === STEP 5: 신체 정보 === -->
+<div class="ob-screen" id="step5">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:50%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(4)">‹</button>
+    <span class="ob-step-label">STEP 5 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">신체 정보를 입력해 주세요</div>
+    <div class="ob-sub">BMI 계산을 통해 임상 리스크를 분석합니다.</div>
+    <div style="margin-bottom:24px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--on-surface-muted);">키</div>
+      <div style="text-align:center;margin-bottom:8px;"><span id="heightVal" style="font-size:32px;font-weight:800;color:var(--primary);">170</span><span style="font-size:16px;font-weight:600;color:var(--on-surface-muted);margin-left:4px;">cm</span></div>
+      <input type="range" min="120" max="200" value="170" oninput="document.getElementById('heightVal').textContent=this.value">
+      <div class="slider-range"><span>120cm</span><span>200cm</span></div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--on-surface-muted);">몸무게</div>
+      <div style="text-align:center;margin-bottom:8px;"><span id="weightVal" style="font-size:32px;font-weight:800;color:var(--primary);">70</span><span style="font-size:16px;font-weight:600;color:var(--on-surface-muted);margin-left:4px;">kg</span></div>
+      <input type="range" min="30" max="150" value="70" oninput="document.getElementById('weightVal').textContent=this.value">
+      <div class="slider-range"><span>30kg</span><span>150kg</span></div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(6)">다음</button>
+  </div>
+</div>
+
+<!-- === STEP 6: 가족력 === -->
+<div class="ob-screen" id="step6">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:60%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(5)">‹</button>
+    <span class="ob-step-label">STEP 6 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">가족력이 있나요?</div>
+    <div class="ob-sub">해당하는 항목을 모두 선택해 주세요. (복수 선택 가능)</div>
+    <div class="tag-row" id="familyHistory">
+      <div class="tag" onclick="toggleTag(this)">고혈압</div>
+      <div class="tag" onclick="toggleTag(this)">당뇨병</div>
+      <div class="tag" onclick="toggleTag(this)">심장질환</div>
+      <div class="tag" onclick="toggleTag(this)">뇌졸중</div>
+      <div class="tag" onclick="toggleTag(this)">암</div>
+      <div class="tag" onclick="toggleTag(this)">비만</div>
+      <div class="tag" onclick="toggleTag(this)">고지혈증</div>
+      <div class="tag" onclick="toggleTag(this)">없음</div>
+    </div>
+    <div style="background:var(--risk-warning-bg);border-radius:var(--r-md);padding:12px 14px;margin-top:8px;">
+      <div style="font-size:12px;color:#78350F;line-height:1.5;">가족력은 유전 리스크 점수(30%)에 반영됩니다. 정확히 입력할수록 관리 효과가 높아집니다.</div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(7)">다음</button>
+  </div>
+</div>
+
+<!-- === STEP 7: 생활습관 === -->
+<div class="ob-screen" id="step7">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:70%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(6)">‹</button>
+    <span class="ob-step-label">STEP 7 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">평소 생활습관을<br>알려주세요</div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">운동 빈도</div>
+      <div class="option-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="option-card" onclick="selectOption(this, 'ex')" data-group="ex" style="padding:12px;">
+          <div class="option-icon" style="font-size:22px;">😴</div>
+          <div class="option-label" style="font-size:12px;">거의 안함</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'ex')" data-group="ex" style="padding:12px;">
+          <div class="option-icon" style="font-size:22px;">🚶</div>
+          <div class="option-label" style="font-size:12px;">주 1~2회</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'ex')" data-group="ex" style="padding:12px;">
+          <div class="option-icon" style="font-size:22px;">🏃</div>
+          <div class="option-label" style="font-size:12px;">주 3회 이상</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">외식 빈도</div>
+      <div class="option-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="option-card" onclick="selectOption(this, 'eat')" data-group="eat" style="padding:12px;">
+          <div class="option-icon" style="font-size:22px;">🥗</div>
+          <div class="option-label" style="font-size:12px;">주 1~2회</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'eat')" data-group="eat" style="padding:12px;">
+          <div class="option-icon" style="font-size:22px;">🍱</div>
+          <div class="option-label" style="font-size:12px;">주 3~4회</div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'eat')" data-group="eat" style="padding:12px;">
+          <div class="option-icon" style="font-size:22px;">🍔</div>
+          <div class="option-label" style="font-size:12px;">거의 매일</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(8)">다음</button>
+  </div>
+</div>
+
+<!-- === STEP 8: 수면 === -->
+<div class="ob-screen" id="step8">
+  <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:85%;"></div></div>
+  <div class="ob-header">
+    <button class="ob-back" onclick="goStep(7)">‹</button>
+    <span class="ob-step-label">STEP 8 / 9</span>
+  </div>
+  <div class="ob-body">
+    <div class="ob-title">평균 수면 시간은<br>얼마나 되나요?</div>
+    <div class="ob-sub">수면은 환경 리스크 점수(15%)에 반영됩니다.</div>
+    <div class="slider-wrap" style="text-align:center;padding-top:20px;">
+      <div class="slider-value"><span id="sleepVal">7</span><span class="slider-unit">시간</span></div>
+      <input type="range" min="3" max="12" step="0.5" value="7" oninput="document.getElementById('sleepVal').textContent=this.value">
+      <div class="slider-range"><span>3시간</span><span>12시간</span></div>
+    </div>
+    <div style="margin-top:28px;text-align:center;padding:16px;background:var(--primary-container);border-radius:var(--r-lg);">
+      <div style="font-size:13px;color:var(--on-primary-container);line-height:1.6;">권장 수면 시간은 <strong>7~9시간</strong>입니다.<br>충분한 수면이 리스크 점수를 낮춰요.</div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="btn btn-primary btn-w" onclick="goStep(9)">다음</button>
+  </div>
+</div>
+
+<!-- === STEP 9: 결과 + 첫 미션 === -->
+<div class="ob-screen" id="step9" style="background: linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 50%);">
+  <div style="padding: 20px 20px 0; text-align: center;">
+    <div style="font-size:14px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px;">설문 완료!</div>
+  </div>
+  <div class="ob-body">
+    <div class="risk-reveal">
+      <div class="big-ring">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="66" fill="none" stroke="var(--border)" stroke-width="14"/>
+          <circle cx="80" cy="80" r="66" fill="none" stroke="var(--risk-warning)" stroke-width="14"
+            stroke-dasharray="414.69" stroke-dashoffset="186.61"
+            stroke-linecap="round" transform="rotate(-90 80 80)" id="revealRing"
+            style="transition: stroke-dashoffset 1.5s ease;"/>
+        </svg>
+        <div class="ring-inner">
+          <span class="ring-score" style="color:var(--risk-warning);" id="revealScore">55</span>
+          <span class="ring-label">점</span>
+        </div>
+      </div>
+      <span class="rbadge rb-warn" style="margin-top:12px;">● 주의</span>
+      <div class="reveal-title">김철수님의 첫 리스크 점수</div>
+      <div class="reveal-sub">점수가 낮을수록 건강해요.<br>챌린지로 점수를 낮춰 가족과 함께 건강해지세요!</div>
+      <div class="mission-card">
+        <div class="mission-label">오늘의 첫 미션</div>
+        <div class="mission-title">🚶 가족 함께 5,000보 걷기</div>
+        <div class="mission-desc">완료하면 리스크 점수 −2점 예상</div>
+      </div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <a href="02-home.html" class="btn btn-primary btn-w" style="text-align:center;">홈으로 시작하기</a>
+  </div>
+</div>
+
+</div><!-- phone -->
+</div>
+
+<script>
+function goStep(n) {
+  document.querySelectorAll('.ob-screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  if (n === 9) {
+    setTimeout(() => {
+      const ring = document.getElementById('revealRing');
+      if (ring) {
+        ring.style.strokeDashoffset = '186.61';
+      }
+    }, 200);
+  }
+  window.scrollTo(0,0);
+}
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+}
+function selectOption(el, group) {
+  if (group) {
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
+  } else {
+    el.closest('.option-grid').querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+  }
+  el.classList.add('selected');
+}
+function toggleTag(el) {
+  el.classList.toggle('selected');
+}
+</script>
+</body>
+</html>
