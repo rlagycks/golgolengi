@@ -1,16 +1,37 @@
-
-# Build outputs
-# Debug
-# Dependencies
-# Env
-# Expo
-# IDE
-# Local env
-# Metro
-# Native build artifacts
-# Node
-# TypeScript
 # macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.swo
+*.swp
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+npm-debug.*
+npm-debug.log*
+yarn-debug.*
+yarn-error.*
+yarn-error.log
+
+# Expo / React Native
+.expo/
+.metro-health-check*
+web-build/
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Certs / Keys
 *.jks
 *.key
 *.mobileprovision
@@ -18,25 +39,20 @@
 *.p12
 *.p8
 *.pem
-*.swo
-*.swp
-*.tsbuildinfo
-.AppleDouble
-.DS_Store
-.LSOverride
-.env
-.env.*.local
-.env.local
-.expo/
-.idea/
-.metro-health-check*
-.vscode/
-build/
-dist/
-node_modules/
-npm-debug.*
-npm-debug.log*
-web-build/
-yarn-debug.*
-yarn-error.*
-yarn-error.log
+
+# Gradle / Android build
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/local.properties
+
+# Spring Boot build
+backend/build/
+backend/.gradle/
+
+# Docs (불필요)
+docs/
+design/
+
+# Misc
+*.class

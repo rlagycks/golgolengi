@@ -1,0 +1,62 @@
+package com.golgolengi.global.config;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.golgolengi.global.jwt.JwtAuthFilter;
+import com.golgolengi.global.response.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import static org.springframework.security.config.Customizer.withDefaults;
+
+import java.nio.charset.StandardCharsets;
+
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+    private final ObjectMapper objectMapper;
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .cors(withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .formLogin(f -> f.disable())
+                .httpBasic(b -> b.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/oauth/kakao/callback", "/login/oauth2/code/kakao", "/auth/refresh", "/actuator/health", "/dev/login", "/dev/reset").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            res.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                            res.getWriter().write(
+                                    objectMapper.writeValueAsString(ApiResponse.fail("인증이 필요합니다."))
+                            );
+                        })
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setStatus(HttpStatus.FORBIDDEN.value());
+                            res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            res.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                            res.getWriter().write(
+                                    objectMapper.writeValueAsString(ApiResponse.fail("접근 권한이 없습니다."))
+                            );
+                        })
+                )
+                .build();
+    }
+}
