@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +38,7 @@ public class MissionService {
         if (familyId != null) {
             List<Mission> active = missionRepository.findByFamilyIdAndStatus(familyId, "ACTIVE");
             if (!active.isEmpty()) {
-                return active.stream().map(MissionResponse::from).toList();
+                return active.stream().map(mission -> toResponse(mission, memberId)).toList();
             }
         }
 
@@ -50,7 +51,7 @@ public class MissionService {
                 .map(fm -> fm.getFamilyId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FAMILY_MEMBER_NOT_FOUND));
         return missionRepository.findByFamilyIdAndStatus(familyId, "ACTIVE")
-                .stream().map(MissionResponse::from).toList();
+                .stream().map(mission -> toResponse(mission, memberId)).toList();
     }
 
     public MissionResponse checkIn(String memberId, CheckInRequest request) {
@@ -66,7 +67,7 @@ public class MissionService {
         // 배지 자동 부여 (내부 호출 전용)
         badgeService.checkAndAward(memberId);
 
-        return MissionResponse.from(mission);
+        return toResponse(mission, memberId);
     }
 
     // ── 추천 미션 생성 ──────────────────────────────────────────────────────────
@@ -74,7 +75,27 @@ public class MissionService {
     private List<MissionResponse> generateRecommendedMissions(String memberId, String familyId) {
         List<Mission> templates = buildMissionTemplates(memberId, familyId);
         List<Mission> saved = missionRepository.saveAll(templates);
-        return saved.stream().map(MissionResponse::from).toList();
+        return saved.stream().map(mission -> toResponse(mission, memberId)).toList();
+    }
+
+    private MissionResponse toResponse(Mission mission, String memberId) {
+        String missionId = mission.getId().toHexString();
+        List<MissionLog> logs = missionLogRepository.findByMissionId(missionId);
+        int currentValue = logs.stream()
+                .filter(log -> Objects.equals(log.getMemberId(), memberId))
+                .mapToInt(MissionLog::getValue)
+                .max()
+                .orElse(0);
+        long completedCount = logs.stream()
+                .filter(log -> log.getValue() >= mission.getTargetCount())
+                .map(MissionLog::getMemberId)
+                .distinct()
+                .count();
+        int totalFamilyCount = mission.getFamilyId() == null
+                ? 1
+                : familyMemberRepository.findByFamilyId(mission.getFamilyId()).size();
+
+        return MissionResponse.from(mission, currentValue, completedCount, totalFamilyCount);
     }
 
     private List<Mission> buildMissionTemplates(String memberId, String familyId) {

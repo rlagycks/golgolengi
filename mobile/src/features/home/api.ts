@@ -41,6 +41,9 @@ interface BackendMission {
   category: string;
   status: string;
   targetCount: number;
+  currentValue?: number;
+  completedCount?: number;
+  totalFamilyCount?: number;
   unit: string;
   endDate: string;
 }
@@ -60,6 +63,40 @@ export interface HomeData {
   todayTotalCount: number;
   urgentChallenge: Challenge | null;
   recentBadges: Badge[];
+}
+
+function mapCategory(category?: string): Challenge['category'] {
+  switch ((category ?? '').toLowerCase()) {
+    case 'walk':
+    case 'walking':
+      return 'walk';
+    case 'diet':
+      return 'diet';
+    case 'sleep':
+      return 'sleep';
+    case 'water':
+    case 'hydration':
+      return 'water';
+    default:
+      return 'walk';
+  }
+}
+
+function mapUnit(unit?: string): string {
+  switch ((unit ?? '').toLowerCase()) {
+    case 'steps':
+      return '보';
+    case 'glasses':
+      return '잔';
+    case 'hours':
+      return '시간';
+    case 'servings':
+      return '회';
+    case 'minutes':
+      return '분';
+    default:
+      return unit ?? '';
+  }
 }
 
 export async function fetchHomeData(): Promise<HomeData> {
@@ -106,23 +143,31 @@ export async function fetchHomeData(): Promise<HomeData> {
 
   const urgentChallenge: Challenge | null =
     missions.length > 0
-      ? {
-          id: missions[0].missionId,
-          title: missions[0].title,
-          description: missions[0].description ?? '',
-          category: (missions[0].category ?? 'walk') as Challenge['category'],
-          targetValue: missions[0].targetCount ?? 1,
-          currentValue: 0,
-          unit: missions[0].unit ?? '',
-          status: 'ongoing',
-          isAiRecommended: true,
-          isUrgent: true,
-          completedCount: 0,
-          totalFamilyCount: members.length,
-          dueDate: missions[0].endDate
-            ? new Date(missions[0].endDate).toISOString()
-            : new Date().toISOString(),
-        }
+      ? (() => {
+          const mission = missions[0];
+          const targetValue = mission.targetCount ?? 1;
+          const currentValue = mission.currentValue ?? 0;
+          const isCompleted =
+            (mission.status ?? '').toLowerCase() === 'completed' || currentValue >= targetValue;
+
+          return {
+            id: mission.missionId,
+            title: mission.title,
+            description: mission.description ?? '',
+            category: mapCategory(mission.category),
+            targetValue,
+            currentValue,
+            unit: mapUnit(mission.unit),
+            status: isCompleted ? 'completed' : 'ongoing',
+            isAiRecommended: true,
+            isUrgent: !isCompleted,
+            completedCount: mission.completedCount ?? 0,
+            totalFamilyCount: mission.totalFamilyCount ?? members.length,
+            dueDate: mission.endDate
+              ? new Date(mission.endDate).toISOString()
+              : new Date().toISOString(),
+          };
+        })()
       : null;
 
   const recentBadges: Badge[] = badges.slice(0, 3).map((b, i) => {
@@ -154,7 +199,7 @@ export async function fetchHomeData(): Promise<HomeData> {
     familyRiskScore,
     members,
     todayStreak: 0,
-    todayCompletedCount: 0,
+    todayCompletedCount: urgentChallenge?.completedCount ?? 0,
     todayTotalCount: members.length,
     urgentChallenge,
     recentBadges,

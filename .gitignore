@@ -50,8 +50,7 @@ mobile/android/local.properties
 backend/build/
 backend/.gradle/
 
-# Docs (불필요)
-docs/
+# Design (HTML UI 등 불필요)
 design/
 
 # Misc

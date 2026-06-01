@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   ScrollView,
@@ -16,6 +17,7 @@ import { ProgressBar } from '../../components/ProgressBar';
 import { Card } from '../../components/Card';
 import { LoadingView, ErrorView } from '../../components/StateViews';
 import { useHomeData } from './hooks';
+import { checkInChallenge } from '../challenge/api';
 import type { FamilyMember, Badge, Challenge } from '../../types';
 
 // ─── Family Risk Hero Card ─────────────────────────────────────────────────────
@@ -106,10 +108,14 @@ function InfoChips({
 function UrgentChallengeCard({
   challenge,
   onCheckIn,
+  checkInLoading,
 }: {
   challenge: Challenge;
   onCheckIn: () => void;
+  checkInLoading: boolean;
 }) {
+  const isCompleted = challenge.status === 'completed';
+
   return (
     <Card variant="default" topAccentColor={Colors.accent} style={styles.challengeCard}>
       <View style={styles.challengeHeader}>
@@ -138,8 +144,18 @@ function UrgentChallengeCard({
         <Text style={styles.challengeFamily}>
           가족 {challenge.completedCount}/{challenge.totalFamilyCount}명 완료
         </Text>
-        <Pressable style={styles.checkInBtn} onPress={onCheckIn}>
-          <Text style={styles.checkInBtnText}>체크인하기</Text>
+        <Pressable
+          style={[
+            styles.checkInBtn,
+            (checkInLoading || isCompleted) && styles.checkInBtnDisabled,
+          ]}
+          onPress={onCheckIn}
+          disabled={checkInLoading || isCompleted}
+          accessibilityLabel="체크인하기"
+        >
+          <Text style={styles.checkInBtnText}>
+            {isCompleted ? '완료됨' : checkInLoading ? '처리 중…' : '체크인하기'}
+          </Text>
         </Pressable>
       </View>
     </Card>
@@ -212,12 +228,30 @@ function BadgeGrid({ badges }: { badges: Badge[] }) {
 
 export function HomeScreen() {
   const { state, refresh } = useHomeData();
+  const [checkInLoading, setCheckInLoading] = useState(false);
 
   if (state.status === 'loading') return <LoadingView />;
   if (state.status === 'error') return <ErrorView message={state.message} />;
   if (state.status === 'empty') return null;
 
   const { data } = state;
+
+  const handleUrgentCheckIn = async () => {
+    if (!data.urgentChallenge || checkInLoading) return;
+
+    setCheckInLoading(true);
+    try {
+      await checkInChallenge(data.urgentChallenge.id, data.urgentChallenge.targetValue);
+      await refresh();
+      Alert.alert('체크인 완료', '오늘의 챌린지 체크인이 완료되었습니다.');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '체크인 처리 중 문제가 발생했습니다.';
+      Alert.alert('체크인 실패', message);
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -250,7 +284,8 @@ export function HomeScreen() {
           <View style={styles.section}>
             <UrgentChallengeCard
               challenge={data.urgentChallenge}
-              onCheckIn={() => {}}
+              onCheckIn={handleUrgentCheckIn}
+              checkInLoading={checkInLoading}
             />
           </View>
         )}
@@ -353,6 +388,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
   },
+  checkInBtnDisabled: { opacity: 0.45 },
   checkInBtnText: { ...Typography.labelMD, color: Colors.textInverse },
 
   noPadCard: { padding: 0 },

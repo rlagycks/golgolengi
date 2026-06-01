@@ -14,24 +14,65 @@ interface BackendMission {
   category: string;
   status: string;
   targetCount: number;
+  currentValue?: number;
+  completedCount?: number;
+  totalFamilyCount?: number;
   unit: string;
   endDate: string;
 }
 
+function mapCategory(category?: string): Challenge['category'] {
+  switch ((category ?? '').toLowerCase()) {
+    case 'walk':
+    case 'walking':
+      return 'walk';
+    case 'diet':
+      return 'diet';
+    case 'sleep':
+      return 'sleep';
+    case 'water':
+    case 'hydration':
+      return 'water';
+    default:
+      return 'walk';
+  }
+}
+
+function mapUnit(unit?: string): string {
+  switch ((unit ?? '').toLowerCase()) {
+    case 'steps':
+      return '보';
+    case 'glasses':
+      return '잔';
+    case 'hours':
+      return '시간';
+    case 'servings':
+      return '회';
+    case 'minutes':
+      return '분';
+    default:
+      return unit ?? '';
+  }
+}
+
 function mapMission(m: BackendMission): Challenge {
+  const targetValue = m.targetCount ?? 1;
+  const currentValue = m.currentValue ?? 0;
+  const isCompleted = (m.status ?? '').toLowerCase() === 'completed' || currentValue >= targetValue;
+
   return {
     id: m.missionId,
     title: m.title,
     description: m.description ?? '',
-    category: (m.category ?? 'walk') as Challenge['category'],
-    targetValue: m.targetCount ?? 1,
-    currentValue: 0,
-    unit: m.unit ?? '',
-    status: m.status === 'completed' ? 'completed' : 'ongoing',
+    category: mapCategory(m.category),
+    targetValue,
+    currentValue,
+    unit: mapUnit(m.unit),
+    status: isCompleted ? 'completed' : 'ongoing',
     isAiRecommended: false,
     isUrgent: false,
-    completedCount: 0,
-    totalFamilyCount: 1,
+    completedCount: m.completedCount ?? 0,
+    totalFamilyCount: m.totalFamilyCount ?? 1,
     dueDate: m.endDate ? new Date(m.endDate).toISOString() : new Date().toISOString(),
   };
 }
@@ -45,8 +86,8 @@ export async function checkInChallenge(
   challengeId: string,
   value: number,
 ): Promise<{ success: boolean; newValue: number }> {
-  await request('POST', '/mission-logs', { missionId: challengeId, value });
-  return { success: true, newValue: value };
+  const mission = await request<BackendMission>('POST', '/mission-logs', { missionId: challengeId, value });
+  return { success: true, newValue: mission.currentValue ?? value };
 }
 
 export async function postponeChallenge(_challengeId: string): Promise<void> {

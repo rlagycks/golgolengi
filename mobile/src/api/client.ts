@@ -1,6 +1,9 @@
 import { tokenStorage } from '../storage/tokenStorage';
+import { Platform } from 'react-native';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
+const DEFAULT_BASE_URL =
+  Platform.OS === 'android' ? 'http://10.0.2.2:8083' : 'http://localhost:8083';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL;
 
 export interface ApiError {
   error_code: string;
