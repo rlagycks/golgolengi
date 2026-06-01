@@ -1,34 +1,42 @@
-# Node
-node_modules/
-npm-debug.log*
-yarn-error.log
 
+# Build outputs
+# Debug
+# Dependencies
+# Env
 # Expo
-.expo/
-dist/
-web-build/
+# IDE
+# Local env
+# Metro
+# Native build artifacts
+# Node
+# TypeScript
+# macOS
 *.jks
-*.p8
-*.p12
 *.key
 *.mobileprovision
 *.orig.*
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# IDE
-.idea/
-.vscode/
-*.swp
+*.p12
+*.p8
+*.pem
 *.swo
-
-# Env
+*.swp
+*.tsbuildinfo
+.AppleDouble
+.DS_Store
+.LSOverride
 .env
-.env.local
 .env.*.local
-
-# Build outputs
+.env.local
+.expo/
+.idea/
+.metro-health-check*
+.vscode/
 build/
+dist/
+node_modules/
+npm-debug.*
+npm-debug.log*
+web-build/
+yarn-debug.*
+yarn-error.*
+yarn-error.log
